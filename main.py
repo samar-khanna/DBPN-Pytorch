@@ -3,6 +3,8 @@ import argparse
 from math import log10
 
 import os
+
+import braceexpand
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,6 +19,10 @@ from data import get_training_set
 import pdb
 import socket
 import time
+import webdataset as wds
+from functools import partial
+
+from fmow_superres import fmow_preprocess_train
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
@@ -110,16 +116,34 @@ if cuda:
     torch.cuda.manual_seed(opt.seed)
 
 print('===> Loading datasets')
-train_set = get_training_set(opt.data_dir, opt.hr_train_dataset, opt.upscale_factor, opt.patch_size, opt.data_augmentation)
+
+shards = (
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-000000-019999.tar')) +
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-020000-039999.tar')) +
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-040000-059999.tar')) +
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-060000-079999.tar')) +
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-080000-099999.tar')) +
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-100000-119999.tar')) +
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-120000-139999.tar')) +
+    list(braceexpand.braceexpand('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-train-140000-159999.tar'))
+)
+train_set = wds.DataPipeline(
+            wds.ResampledShards(shards),
+            wds.tarfile_to_samples(),
+            wds.shuffle(100, initial=100),
+            wds.decode(),
+            partial(fmow_preprocess_train, patch_size=opt.patch_size, lowres=64, highres=512, is_train=True),
+        ).with_length(10000)
+# train_set = get_training_set(opt.data_dir, opt.hr_train_dataset, opt.upscale_factor, opt.patch_size, opt.data_augmentation)
 training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize, shuffle=True)
 
 print('===> Building model ', opt.model_type)
 if opt.model_type == 'DBPNLL':
-    model = DBPNLL(num_channels=3, base_filter=64,  feat = 256, num_stages=10, scale_factor=opt.upscale_factor) 
+    model = DBPNLL(num_channels=13, base_filter=64,  feat = 256, num_stages=10, scale_factor=opt.upscale_factor)
 elif opt.model_type == 'DBPN-RES-MR64-3':
-    model = DBPNITER(num_channels=3, base_filter=64,  feat = 256, num_stages=3, scale_factor=opt.upscale_factor)
+    model = DBPNITER(num_channels=13, base_filter=64,  feat = 256, num_stages=3, scale_factor=opt.upscale_factor)
 else:
-    model = DBPN(num_channels=3, base_filter=64,  feat = 256, num_stages=7, scale_factor=opt.upscale_factor) 
+    model = DBPN(num_channels=13, base_filter=64,  feat = 256, num_stages=7, scale_factor=opt.upscale_factor)
     
 model = torch.nn.DataParallel(model, device_ids=gpus_list)
 criterion = nn.L1Loss()
