@@ -139,11 +139,11 @@ training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, ba
 
 print('===> Building model ', opt.model_type)
 if opt.model_type == 'DBPNLL':
-    model = DBPNLL(num_channels=13, base_filter=64,  feat = 256, num_stages=10, scale_factor=opt.upscale_factor)
+    model = DBPNLL(in_channels=13, out_channels=3, base_filter=64,  feat = 256, num_stages=10, scale_factor=opt.upscale_factor)
 elif opt.model_type == 'DBPN-RES-MR64-3':
-    model = DBPNITER(num_channels=13, base_filter=64,  feat = 256, num_stages=3, scale_factor=opt.upscale_factor)
+    model = DBPNITER(in_channels=13, out_channels=3, base_filter=64,  feat = 256, num_stages=3, scale_factor=opt.upscale_factor)
 else:
-    model = DBPN(num_channels=13, base_filter=64,  feat = 256, num_stages=7, scale_factor=opt.upscale_factor)
+    model = DBPN(in_channels=13, out_channels=3, base_filter=64,  feat = 256, num_stages=7, scale_factor=opt.upscale_factor)
     
 model = torch.nn.DataParallel(model, device_ids=gpus_list)
 criterion = nn.L1Loss()

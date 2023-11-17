@@ -5,7 +5,7 @@ from base_networks import *
 from torchvision.transforms import *
 
 class Net(nn.Module):
-    def __init__(self, num_channels, base_filter, feat, num_stages, scale_factor):
+    def __init__(self, in_channels, out_channels, base_filter, feat, num_stages, scale_factor):
         super(Net, self).__init__()
         
         if scale_factor == 2:
@@ -24,7 +24,7 @@ class Net(nn.Module):
         self.num_stages = num_stages
         
         #Initial Feature Extraction
-        self.feat0 = ConvBlock(num_channels, feat, 3, 1, 1, activation='prelu', norm=None)
+        self.feat0 = ConvBlock(in_channels, feat, 3, 1, 1, activation='prelu', norm=None)
         self.feat1 = ConvBlock(feat, base_filter, 1, 1, 0, activation='prelu', norm=None)
         #Back-projection stages
         self.up1 = UpBlock(base_filter, kernel, stride, padding)
@@ -41,7 +41,7 @@ class Net(nn.Module):
         self.down6 = D_DownBlock(base_filter, kernel, stride, padding, 6)
         self.up7 = D_UpBlock(base_filter, kernel, stride, padding, 6)
         #Reconstruction
-        self.output_conv = ConvBlock(num_stages*base_filter, num_channels, 3, 1, 1, activation=None, norm=None)
+        self.output_conv = ConvBlock(num_stages*base_filter, out_channels, 3, 1, 1, activation=None, norm=None)
         
         for m in self.modules():
             classname = m.__class__.__name__
