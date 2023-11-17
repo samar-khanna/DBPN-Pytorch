@@ -135,7 +135,7 @@ train_set = wds.DataPipeline(
             partial(fmow_preprocess_train, patch_size=opt.patch_size, lowres=64, highres=512, is_train=True),
         ).with_length(10000)
 # train_set = get_training_set(opt.data_dir, opt.hr_train_dataset, opt.upscale_factor, opt.patch_size, opt.data_augmentation)
-training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize, shuffle=True)
+training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize,)
 
 print('===> Building model ', opt.model_type)
 if opt.model_type == 'DBPNLL':
