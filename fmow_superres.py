@@ -130,5 +130,7 @@ def fmow_preprocess_train(examples, patch_size=None, lowres=64, highres=512, is_
 
         if is_train and patch_size is not None:
             input, target, bicubic = get_patch(input, target, bicubic, patch_size, upscale)
-
-        yield input, target, bicubic
+        elif is_train:
+            yield input, target, bicubic
+        else:
+            yield input.unsqueeze(0), target.unsqueeze(0), bicubic.unsqueeze(0)

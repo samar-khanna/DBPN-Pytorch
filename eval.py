@@ -3,6 +3,7 @@ import argparse
 
 import os
 import torch
+import torchvision.transforms as tvt
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
@@ -17,6 +18,11 @@ from scipy.misc import imsave
 import scipy.io as sio
 import time
 import cv2
+
+import webdataset as wds
+from functools import partial
+
+from fmow_superres import fmow_preprocess_train
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
@@ -49,16 +55,21 @@ if cuda:
     torch.cuda.manual_seed(opt.seed)
 
 print('===> Loading datasets')
-test_set = get_eval_set(os.path.join(opt.input_dir,opt.test_dataset), opt.upscale_factor)
-testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
+# test_set = get_eval_set(os.path.join(opt.input_dir,opt.test_dataset), opt.upscale_factor)
+test_set = wds.WebDataset('/atlas2/data/satlas/fmow-512-sentinel-paired/fmow-512-sentinel-paired-val.tar').decode().compose(
+    partial(fmow_preprocess_train,  lowres=64, highres=512, is_train=False)
+)
+
+# testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
+testing_data_loader = iter(test_set)
 
 print('===> Building model')
 if opt.model_type == 'DBPNLL':
-    model = DBPNLL(num_channels=3, base_filter=64,  feat = 256, num_stages=10, scale_factor=opt.upscale_factor) ###D-DBPN
+    model = DBPNLL(in_channels=13, out_channels=3, base_filter=64,  feat = 256, num_stages=10, scale_factor=opt.upscale_factor) ###D-DBPN
 elif opt.model_type == 'DBPN-RES-MR64-3':
-    model = DBPNITER(num_channels=3, base_filter=64,  feat = 256, num_stages=3, scale_factor=opt.upscale_factor) ###D-DBPN
+    model = DBPNITER(in_channels=13, out_channels=3, base_filter=64,  feat = 256, num_stages=3, scale_factor=opt.upscale_factor) ###D-DBPN
 else:
-    model = DBPN(num_channels=3, base_filter=64,  feat = 256, num_stages=7, scale_factor=opt.upscale_factor) ###D-DBPN
+    model = DBPN(in_channels=13, out_channels=3, base_filter=64,  feat = 256, num_stages=7, scale_factor=opt.upscale_factor) ###D-DBPN
     
 if cuda:
     model = torch.nn.DataParallel(model, device_ids=gpus_list)
@@ -70,10 +81,15 @@ if cuda:
     model = model.cuda(gpus_list[0])
 
 def eval():
+    gen_dir = '/atlas2/u/samarkhanna/DBPN-Pytorch/outputs/dbpn/samples/generated'
+    ref_dir = '/atlas2/u/samarkhanna/DBPN-Pytorch/outputs/dbpn/samples/ground_truth'
+    os.makedirs(gen_dir, exist_ok=True)
+    os.makedirs(ref_dir, exist_ok=True)
+
     model.eval()
-    for batch in testing_data_loader:
+    for i, batch in enumerate(testing_data_loader):
         with torch.no_grad():
-            input, bicubic, name = Variable(batch[0]), Variable(batch[1]), batch[2]
+            input, target, bicubic = Variable(batch[0]), Variable(batch[1]), batch[2]
         if cuda:
             input = input.cuda(gpus_list[0])
             bicubic = bicubic.cuda(gpus_list[0])
@@ -94,8 +110,16 @@ def eval():
             prediction = prediction + bicubic
 
         t1 = time.time()
-        print("===> Processing: %s || Timer: %.4f sec." % (name[0], (t1 - t0)))
-        save_img(prediction.cpu().data, name[0])
+        # print("===> Processing: %s || Timer: %.4f sec." % (name[0], (t1 - t0)))
+        pred_im = tvt.functional.to_pil_image(prediction.squeeze(0))  # (C, H, W)
+        gt_im = tvt.functional.to_pil_image(target.squeeze(0))  # (C, H, W)
+
+        pred_im.save(os.path.join(gen_dir, f"{i}.png"))
+        gt_im.save(os.path.join(ref_dir, f"{i}.png"))
+        if i % 100 == 0:
+            print(f"{i} images generated.")
+
+        # save_img(prediction.cpu().data, name[0])
 
 def save_img(img, img_name):
     save_img = img.squeeze().clamp(0, 1).numpy().transpose(1,2,0)
