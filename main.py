@@ -76,6 +76,9 @@ def train(epoch):
         loss.backward()
         optimizer.step()
 
+        if iteration % opt.snapshots == 0:
+            checkpoint(iteration)
+
         print("===> Epoch[{}]({}/{}): Loss: {:.4f} || Timer: {:.4f} sec.".format(epoch, iteration, len(training_data_loader), loss.data, (t1 - t0)))
 
     print("===> Epoch {} Complete: Avg. Loss: {:.4f}".format(epoch, epoch_loss / len(training_data_loader)))
