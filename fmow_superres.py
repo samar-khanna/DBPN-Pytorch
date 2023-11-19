@@ -91,7 +91,7 @@ def get_patch(img_in, img_tar, img_bic, patch_size, scale, ix=-1, iy=-1):
     # img_tar = img_tar.crop((ty, tx, ty + tp, tx + tp))
     img_tar = transforms.functional.crop(img_tar, ty, tx, tp, tp)
     # img_bic = img_bic.crop((ty, tx, ty + tp, tx + tp))
-    img_bic = transforms.functional.crop(img_bic, ty, tx, tp, tp)
+    # img_bic = transforms.functional.crop(img_bic, ty, tx, tp, tp)
 
     # info_patch = {
     #     'ix': ix, 'iy': iy, 'ip': ip, 'tx': tx, 'ty': ty, 'tp': tp}
