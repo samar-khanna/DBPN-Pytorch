@@ -91,7 +91,7 @@ def get_patch(img_in, img_tar, img_bic, patch_size, scale, ix=-1, iy=-1):
     # img_tar = img_tar.crop((ty, tx, ty + tp, tx + tp))
     img_tar = transforms.functional.crop(img_tar, ty, tx, tp, tp)
     # img_bic = img_bic.crop((ty, tx, ty + tp, tx + tp))
-    # img_bic = transforms.functional.crop(img_bic, ty, tx, tp, tp)
+    img_bic = transforms.functional.crop(img_bic, ty, tx, tp, tp)
 
     # info_patch = {
     #     'ix': ix, 'iy': iy, 'ip': ip, 'tx': tx, 'ty': ty, 'tp': tp}
@@ -126,11 +126,12 @@ def fmow_preprocess_train(examples, patch_size=None, lowres=64, highres=512, is_
         #     transforms.functional.resize(target, lowres, antialias=True, interpolation=transforms.InterpolationMode.BICUBIC),
         #     highres, antialias=True, interpolation=transforms.InterpolationMode.BICUBIC
         # )
-        bicubic = torch.tensor(0)
-        # bicubic = transforms.functional.resize(input, highres, interpolation=transforms.InterpolationMode.BICUBIC)
+        # bicubic = torch.tensor(0)
+        bicubic = transforms.functional.resize(input, highres, interpolation=transforms.InterpolationMode.BICUBIC)
 
         if is_train and patch_size is not None:
             input, target, bicubic = get_patch(input, target, bicubic, patch_size, upscale)
+            yield input, target, bicubic
         elif is_train:
             yield input, target, bicubic
         else:
