@@ -122,10 +122,11 @@ def fmow_preprocess_train(examples, patch_size=None, lowres=64, highres=512, is_
         upscale = highres // lowres
         input = low_res_transforms(example['multispectral.npy'])
         target = target_transforms(example['rgb.npy'])
-        bicubic = transforms.functional.resize(
-            transforms.functional.resize(target, lowres, interpolation=transforms.InterpolationMode.BICUBIC),
-            highres, interpolation=transforms.InterpolationMode.BICUBIC
-        )
+        # bicubic = transforms.functional.resize(
+        #     transforms.functional.resize(target, lowres, antialias=True, interpolation=transforms.InterpolationMode.BICUBIC),
+        #     highres, antialias=True, interpolation=transforms.InterpolationMode.BICUBIC
+        # )
+        bicubic = torch.tensor(0)
         # bicubic = transforms.functional.resize(input, highres, interpolation=transforms.InterpolationMode.BICUBIC)
 
         if is_train and patch_size is not None:
